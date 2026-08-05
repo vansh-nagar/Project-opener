@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setUpStatusItem()
         registerHotKey()
+        observeWakeAndUnlock()
 
         model.refresh(force: true)
 
@@ -50,9 +51,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
-    private func registerHotKey() {
+    /// `silent` suppresses the alerts — re-registration after wake happens
+    /// unattended and must never pop a modal in the user's face.
+    private func registerHotKey(silent: Bool = false) {
         guard let parsed = model.config.parsedHotkey else {
-            warn("Could not parse the hotkey “\(model.config.hotkey)”. Falling back to ⌥⌘O.")
+            if !silent {
+                warn("Could not parse the hotkey “\(model.config.hotkey)”. Falling back to ⌥⌘O.")
+            }
             hotKey = HotKey(keyCode: 31, modifiers: UInt32(cmdKey | optionKey)) { [weak self] in
                 self?.panelController.toggle()
             }
@@ -65,9 +70,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Log.debug("hotkey “\(model.config.hotkey)” registered: \(hotKey != nil)")
 
-        if hotKey == nil {
+        if hotKey == nil, !silent {
             warn("The hotkey “\(model.config.hotkey)” is already taken by another app. Use the menu bar icon, or pick a different one in config.json.")
         }
+    }
+
+    /// A Carbon hotkey can quietly stop firing after the machine sleeps or the
+    /// screen locks — the registration survives but events stop arriving, so the
+    /// app looks alive while the shortcut does nothing. Re-registering on wake
+    /// and unlock keeps it working across long uptimes.
+    private func observeWakeAndUnlock() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reregisterHotKey(reason: "wake") }
+        }
+
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.screenIsUnlocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reregisterHotKey(reason: "unlock") }
+        }
+    }
+
+    private func reregisterHotKey(reason: String) {
+        Log.debug("re-registering hotkey after \(reason)")
+        hotKey?.invalidate() // free the slot before re-registering the same combo
+        hotKey = nil
+        registerHotKey(silent: true)
     }
 
     // MARK: - Menu actions

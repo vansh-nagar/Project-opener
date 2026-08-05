@@ -190,6 +190,10 @@ shows a warning at launch when registration fails. Pick a different `hotkey` in
 `config.json` and **Reload Config**. You can always open the panel from the menu
 bar icon.
 
+If the shortcut worked earlier in the session and then stopped, the app
+re-registers it on wake and unlock to recover automatically. Quitting and
+relaunching from the menu bar always clears it.
+
 **The panel opens behind a fullscreen app.** Raise `panelLevel` in `config.json`
 to `screenSaver` and **Reload Config**. The default (`popUpMenu`) clears the menu
 bar and handles this for normal fullscreen apps.
