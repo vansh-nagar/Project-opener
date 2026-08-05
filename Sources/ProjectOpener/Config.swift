@@ -11,7 +11,24 @@ struct Config: Codable {
     var editorBundleIDs: [String]
     /// Dismiss the panel when it loses focus. Set false to keep it pinned open.
     var hideOnBlur: Bool?
+    /// How high the panel floats. `.floating` is far too low to clear another
+    /// app's fullscreen space — `popUpMenu` sits above the menu bar, which is
+    /// where Spotlight-style launchers live.
+    /// floating | modalPanel | mainMenu | statusBar | popUpMenu | screenSaver
+    var panelLevel: String?
+
     var shouldHideOnBlur: Bool { hideOnBlur ?? true }
+
+    var windowLevel: NSWindow.Level {
+        switch panelLevel ?? "popUpMenu" {
+        case "floating": return .floating
+        case "modalPanel": return .modalPanel
+        case "mainMenu": return .mainMenu
+        case "statusBar": return .statusBar
+        case "screenSaver": return .screenSaver
+        default: return .popUpMenu
+        }
+    }
 
     static let `default` = Config(
         roots: ["~/Desktop/mvp/dev"],
@@ -21,7 +38,8 @@ struct Config: Codable {
             "com.todesktop.230313mzl4w4u92", // Cursor
             "com.microsoft.VSCode",
         ],
-        hideOnBlur: true
+        hideOnBlur: true,
+        panelLevel: "popUpMenu"
     )
 
     var rootURLs: [URL] {

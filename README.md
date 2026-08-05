@@ -146,7 +146,8 @@ Edit it, then choose **Reload Config** from the menu bar.
     "com.todesktop.230313mzl4w4u92",
     "com.microsoft.VSCode"
   ],
-  "hideOnBlur": true
+  "hideOnBlur": true,
+  "panelLevel": "popUpMenu"
 }
 ```
 
@@ -157,6 +158,13 @@ Edit it, then choose **Reload Config** from the menu bar.
 | `hotkey` | `cmd`, `opt`, `ctrl`, `shift` + a letter, digit, or `space`. Needs at least one modifier. |
 | `editorBundleIDs` | Tried in order; first installed one wins. Default is Cursor, then VS Code. |
 | `hideOnBlur` | `false` keeps the panel open when it loses focus. |
+| `panelLevel` | How high the panel floats. See below. |
+
+`panelLevel` accepts `floating` (3), `modalPanel` (8), `mainMenu` (24),
+`statusBar` (25), `popUpMenu` (101, the default) or `screenSaver` (1000). The
+default clears the menu bar, which is what lets the panel appear over fullscreen
+apps. `screenSaver` is available if you need to outrank something stubborn,
+though it will also cover screen savers and some system alerts.
 
 Editors launch through `NSWorkspace` and a bundle ID rather than a shell
 command, so there's no `PATH` setup — the `cursor` CLI isn't on `PATH` by
@@ -182,6 +190,10 @@ shows a warning at launch when registration fails. Pick a different `hotkey` in
 `config.json` and **Reload Config**. You can always open the panel from the menu
 bar icon.
 
+**The panel opens behind a fullscreen app.** Raise `panelLevel` in `config.json`
+to `screenSaver` and **Reload Config**. The default (`popUpMenu`) clears the menu
+bar and handles this for normal fullscreen apps.
+
 **A new project doesn't appear.** Press `⌘R`, or menu bar → **Rescan Projects**.
 It also rescans automatically when the panel opens, throttled to once every 30
 seconds.
@@ -192,6 +204,13 @@ seconds.
 
 The panel is a non-activating `NSPanel` that can join all Spaces and float over
 fullscreen apps, so it appears without disturbing what you were doing.
+
+Getting above a fullscreen app takes two things that are easy to confuse.
+`.fullScreenAuxiliary` only floats a window over **its own app's** fullscreen
+window — it's `.canJoinAllSpaces` that carries the panel into *another* app's
+fullscreen space. Both need a window level above the menu bar (24); the default
+`.floating` is only 3, which is why a panel with the right collection behaviour
+can still end up underneath.
 
 The global hotkey uses Carbon's `RegisterEventHotKey`, which — unlike
 `NSEvent.addGlobalMonitorForEvents` — needs **no Accessibility permission**. The

@@ -44,17 +44,33 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.level = .floating
         panel.isMovableByWindowBackground = false
         panel.hidesOnDeactivate = false
         panel.animationBehavior = .utilityWindow
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.delegate = self
+        applyLevel()
 
         let host = NSHostingView(rootView: SearchView(model: model))
         host.frame = panel.contentView?.bounds ?? .zero
         host.autoresizingMask = [.width, .height]
         panel.contentView = host
+    }
+
+    /// Re-applied on every show. macOS can drop a window's level back when it
+    /// moves between Spaces, and re-asserting also makes `Reload Config` take
+    /// effect without a restart.
+    ///
+    /// `.canJoinAllSpaces` is what carries the panel into *another* app's
+    /// fullscreen space; `.fullScreenAuxiliary` alone only covers our own.
+    /// `.ignoresCycle` keeps it out of ⌘` window cycling.
+    private func applyLevel() {
+        panel.level = model.config.windowLevel
+        panel.collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .stationary,
+            .ignoresCycle,
+        ]
     }
 
     // MARK: - Show / hide
@@ -67,6 +83,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         hasBeenKey = false
         model.reset()
         model.refresh()
+        applyLevel()
         resize(for: model.rows)
         positionOnActiveScreen()
 
@@ -74,7 +91,10 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         focusSearchField()
         installKeyMonitor()
-        Log.debug("show: visible=\(panel.isVisible) key=\(panel.isKeyWindow) frame=\(panel.frame)")
+        Log.debug("""
+            show: visible=\(panel.isVisible) key=\(panel.isKeyWindow) \
+            level=\(panel.level.rawValue) frame=\(panel.frame)
+            """)
 
         if Log.enabled {
             // Re-check once the background scan has landed and resized us.
