@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+ProjectOpener.app/
+.DS_Store
